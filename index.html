@@ -56,6 +56,9 @@ function init() {
   ground.receiveShadow = true;
   scene.add(ground);
 
+  // Create buildings
+  createBuildings();
+
   // Animation loop
   animate();
 }
@@ -63,11 +66,65 @@ function init() {
 function animate() {
   requestAnimationFrame(animate);
 
+  // Animate buildings (slight floating effect)
+  buildings.forEach((building, index) => {
+      building.position.y = building.position.y + Math.sin(Date.now() * 0.001 + index) * 0.01;
+  });
+
   renderer.render(scene, camera);
+}
+
+function createBuildings() {
+  for (let i = 0; i < 15; i++) {
+    const height = Math.random() * 10 + 5;
+    const width = Math.random() * 3 + 2;
+    const depth = Math.random() * 3 + 2;
+
+    const geometry = new THREE.BoxGeometry(width, height, depth);
+    const hue = Math.random() * 360;
+    const material = new THREE.MeshLambertMaterial({ 
+        color: new THREE.Color().setHSL(hue / 360, 0.7, 0.6),
+        transparent: true,
+        opacity: 0.9
+    });
+
+    const building = new THREE.Mesh(geometry, material);
+    building.position.set(
+        (Math.random() - 0.5) * 80,
+        height / 2,
+        (Math.random() - 0.5) * 80
+    );
+    building.castShadow = true;
+    building.receiveShadow = true;
+
+    // Add windows
+    for (let j = 0; j < 5; j++) {
+      const windowGeometry = new THREE.PlaneGeometry(0.3, 0.3);
+      const windowMaterial = new THREE.MeshLambertMaterial({ 
+          color: Math.random() > 0.5 ? 0xffff00 : 0x000000,
+          transparent: true,
+          opacity: 0.8
+      });
+      const window = new THREE.Mesh(windowGeometry, windowMaterial);
+      window.position.set(
+          width / 2 + 0.01,
+          randomArbitrary(-0.5, 0.5) * height,
+          randomArbitrary(-0.5, 0.5) * depth
+      );
+      building.add(window);
+    }
+
+    buildings.push(building);
+    scene.add(building);
+  }
 }
 
 // Initialize
 init();
+
+function randomArbitrary(min, max) {
+    return Math.random() * (max - min) + min;
+}
   </script>
 </body>
 </html>
