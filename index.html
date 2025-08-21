@@ -64,10 +64,15 @@ function init() {
 
   // Animation loop
   animate();
+
+  // Keyboard controls
+  setupControls();
 }
 
 function animate() {
   requestAnimationFrame(animate);
+
+  handleMovement();
 
   // Animate buildings (slight floating effect)
   buildings.forEach((building, index) => {
@@ -143,6 +148,46 @@ function createAvatar() {
 
   avatar = avatarGroup;
   scene.add(avatar);
+}
+
+let keys = {};
+
+function setupControls() {
+  document.addEventListener('keydown', (event) => {
+    keys[event.code] = true;
+  });
+  document.addEventListener('keyup', (event) => {
+    keys[event.code] = false;
+  });
+}
+
+function handleMovement() {
+  if (keys['KeyW'] || keys['ArrowUp']) {
+    avatar.position.z -= moveSpeed * Math.cos(avatar.rotation.y);
+    avatar.position.x -= moveSpeed * Math.sin(avatar.rotation.y);
+  }
+  if (keys['KeyS'] || keys['ArrowDown']) {
+    avatar.position.z += moveSpeed * Math.cos(avatar.rotation.y);
+    avatar.position.x += moveSpeed * Math.sin(avatar.rotation.y);
+  }
+  if (keys['KeyA'] || keys['ArrowLeft']) {
+    avatar.rotation.y += rotationSpeed;
+  }
+  if (keys['KeyD'] || keys['ArrowRight']) {
+    avatar.rotation.y -= rotationSpeed;
+  }
+
+  // Update camera based on view mode
+  if (isFirstPerson) {
+    camera.position.copy(avatar.position);
+    camera.position.y += 2.5;
+    camera.rotation.y = avatar.rotation.y;
+  } else {
+    camera.position.x = avatar.position.x - 10 * Math.sin(avatar.rotation.y);
+    camera.position.z = avatar.position.z - 10 * Math.cos(avatar.rotation.y);
+    camera.position.y = avatar.position.y + 5;
+    camera.lookAt(avatar.position);
+  }
 }
 
 // Initialize
