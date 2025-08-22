@@ -235,8 +235,8 @@ function handleMovement() {
     camera.position.y += 2.5;
     camera.rotation.y = avatar.rotation.y;
   } else {
-    camera.position.x = avatar.position.x - 10 * Math.sin(avatar.rotation.y);
-    camera.position.z = avatar.position.z - 10 * Math.cos(avatar.rotation.y);
+    camera.position.x = avatar.position.x + 10 * Math.sin(avatar.rotation.y);
+    camera.position.z = avatar.position.z + 10 * Math.cos(avatar.rotation.y);
     camera.position.y = avatar.position.y + 5;
     camera.lookAt(avatar.position);
   }
