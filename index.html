@@ -233,7 +233,7 @@ function handleMovement() {
   if (isFirstPerson) {
     camera.position.copy(avatar.position);
     camera.position.y += 2.5;
-    camera.rotation.y = avatar.rotation.y;
+    camera.rotation.set(0, avatar.rotation.y, 0);
   } else {
     camera.position.x = avatar.position.x + 10 * Math.sin(avatar.rotation.y);
     camera.position.z = avatar.position.z + 10 * Math.cos(avatar.rotation.y);
