@@ -4,9 +4,61 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: 'Arial', sans-serif;
+      overflow: hidden;
+      color: white;
+    }
+
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px;
+      border-radius: 25px;
+      display: flex;
+      gap: 10px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .control-btn {
+        background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .control-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        background: linear-gradient(45deg, #ee5a24, #ff6b6b);
+    }
+  </style>
 </head>
 <body>
   <div id="container">
+    <div id="controls">
+      <button class="control-btn" onclick="toggleView()">Change perspective</button>
+    </div>
   </div>
   <script>
 // Three.js setup
@@ -187,6 +239,15 @@ function handleMovement() {
     camera.position.z = avatar.position.z - 10 * Math.cos(avatar.rotation.y);
     camera.position.y = avatar.position.y + 5;
     camera.lookAt(avatar.position);
+  }
+}
+
+function toggleView() {
+  isFirstPerson = !isFirstPerson;
+  if (isFirstPerson) {
+    avatar.visible = false;
+  } else {
+    avatar.visible = true;
   }
 }
 
