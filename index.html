@@ -58,6 +58,7 @@
   <div id="container">
     <div id="controls">
       <button class="control-btn" onclick="toggleView()">Change perspective</button>
+      <button class="control-btn" onclick="toggleCraftMode()" id="craftBtn">Craft mode</button>
     </div>
   </div>
   <script>
@@ -66,6 +67,7 @@ let scene, camera, renderer, avatar, buildings = [], particles = [];
 let isFirstPerson = true;
 let moveSpeed = 0.1;
 let rotationSpeed = 0.05;
+let isCrafting = false;
 
 // Initialize the 3D world
 function init() {
@@ -257,6 +259,20 @@ function toggleView() {
     avatar.visible = false;
   } else {
     avatar.visible = true;
+  }
+}
+
+function toggleCraftMode() {
+  isCrafting = !isCrafting;
+
+  const craftBtn = document.getElementById('craftBtn');
+
+  if (isCrafting) {
+      craftBtn.textContent = 'Move mode';
+      craftBtn.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)';
+  } else {
+      craftBtn.textContent = 'Craft mode';
+      craftBtn.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)';
   }
 }
 
