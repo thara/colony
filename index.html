@@ -69,6 +69,8 @@ let moveSpeed = 0.1;
 let rotationSpeed = 0.05;
 let isCrafting = false;
 
+let ground = null;
+
 // Initialize the 3D world
 function init() {
   // Scene
@@ -114,7 +116,7 @@ function init() {
       transparent: true,
       opacity: 0.8
   });
-  const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+  ground = new THREE.Mesh(groundGeometry, groundMaterial);
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
@@ -232,6 +234,11 @@ function setupControls() {
 
 function setupMouseEvents() {
   renderer?.domElement?.addEventListener('mousemove', onMouseMove);
+  renderer?.domElement?.addEventListener('click', onMouseClick);
+  renderer?.domElement?.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    onRightClick(e);
+  });
 }
 
 function handleMovement() {
@@ -282,23 +289,67 @@ let raycaster = new THREE.Raycaster();
 let mouse = new THREE.Vector2();
 let highlightBox = null;
 
+// Occupancy map to prevent overlapping blocks
+const occupied = new Set();     // key: "x,y,z"
+const placedBlocks = new Map(); // key -> Mesh (for removal)
+
+// Utility helpers
+const keyOf = (v) => `${v.x}|${v.y}|${v.z}`;
+const snap1 = (n) => Math.floor(n + 0.5); // snap to integer grid
+
+// Base geometry and material for placed blocks
+const blockGeometry = new THREE.BoxGeometry(1, 1, 1);
+function makeBlockMaterial() {
+  const hue = Math.random();
+  const color = new THREE.Color().setHSL(hue, 0.5, 0.6);
+  return new THREE.MeshLambertMaterial({ color, transparent: true, opacity: 0.95 });
+}
+
 function setupBlockSystem() {
-  // Create highlight box
+  // Create highlight box (semi-transparent cube)
   const highlightGeometry = new THREE.BoxGeometry(1.01, 1.01, 1.01);
-  const highlightMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0xffffff, 
-      transparent: true, 
+  const highlightMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
       opacity: 0.3,
       side: THREE.DoubleSide
   });
   highlightBox = new THREE.Mesh(highlightGeometry, highlightMaterial);
   highlightBox.visible = false;
+  highlightBox.renderOrder = 999; // render on top
   scene.add(highlightBox);
+}
+
+function canPlaceAt(v) {
+  return !occupied.has(keyOf(v));
+}
+
+function placeBlockAt(v) {
+  // Create new block mesh
+  const mesh = new THREE.Mesh(blockGeometry, makeBlockMaterial());
+  // Place on top of ground (y=0 -> block center at y=0.5)
+  mesh.position.set(v.x, v.y + 0.5, v.z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+
+  const k = keyOf(v);
+  occupied.add(k);
+  placedBlocks.set(k, mesh);
+}
+
+function removeBlackAt(v) {
+  const k = keyOf(v);
+  const mesh = placedBlocks.get(k);
+  if (!mesh) return false;
+  scne.remove(mesh);
+  placedBlocks.delete(k);
+  occupied.delete(k);
+  return true;
 }
 
 function toggleCraftMode() {
   isCrafting = !isCrafting;
-
   const craftBtn = document.getElementById('craftBtn');
 
   if (isCrafting) {
@@ -308,6 +359,9 @@ function toggleCraftMode() {
       craftBtn.textContent = 'Craft mode';
       craftBtn.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)';
   }
+
+  // Update highlight visibility
+  highlightBox.visible = isCrafting && !!highlightBox.userData.target;
 }
 
 function onMouseMove(event) {
@@ -315,35 +369,58 @@ function onMouseMove(event) {
     if (highlightBox) highlightBox.visible = false;
     return;
   }
-  // normalize mouse position
+  // Convert mouse to normalized device coordinates
   const rect = renderer.domElement.getBoundingClientRect();
   mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
   raycaster.setFromCamera(mouse, camera);
 
-  const groundIntersects = raycaster.intersectObjects([
-    scene.children.find(child => child.geometry && child.geometry.type === 'PlaneGeometry')
-  ].filter(Boolean));
-
-  let targetPosition = null;
-
-  if (0 < groundIntersects.length) {
-    const intersect = groundIntersects[0];
-    targetPosition = new THREE.Vector3(
-        Math.floor(intersect.point.x + 0.5),
-        0,
-        Math.floor(intersect.point.z + 0.5)
-    );
-    highlightBox.material.color.setHex(0x00ff00); // green
-  }
-
-  if (targetPosition) {
-    highlightBox.position.copy(targetPosition);
-    highlightBox.visible = true;
-  } else {
+  // Intersect with ground
+  const intersects = ground ? raycaster.intersectObjects([ground]) : [];
+  if (intersects.length === 0) {
     highlightBox.visible = false;
+    return;
   }
+
+  // Snap intersection point to grid (x,z plane)
+  const p = intersects[0].point;
+  const target = new THREE.Vector3(snap1(p.x), 0, snap1(p.z));
+
+  // Position highlight cube
+  highlightBox.position.set(target.x, target.y + 0.5, target.z);
+  const ok = canPlaceAt(target);
+  highlightBox.material.color.setHex(ok ? 0x00ff00 : 0xff3333); // green or red
+  highlightBox.visible = true;
+
+  // Save current candidate for click
+  highlightBox.userData.target = target;
+}
+
+function onMouseClick(event) {
+  if (!isCrafting || !highlightBox.visible) return;
+  const target = highlightBox.userData.target;
+  if (!target) return;
+  if (!canPlaceAt(target)) return; // block already occupied
+  placeBlockAt(target);
+}
+
+function onRightClick(event) {
+  if (!isCrafting) return;
+  // Convert mouse to NDC
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+
+  // Find intersected placed blocks
+  const hits = raycaster.intersectObjects([...placedBlocks.values()]);
+  if (hits.length === 0) return;
+
+  const hit = hits[0].object;
+  const v = new THREE.Vector3(snap1(hit.position.x), 0, snap1(hit.position.z));
+  removeBlackAt(v);
 }
 
 // Initialize
